@@ -1,10 +1,13 @@
 import sys
 import pygame
+import time
 
 from settings import Settings
+from game_stats import GameStats
 from ship import Ship
 from bullet import Bullet
 from alien import Alien
+
 
 class alienInvasion:
 	"""Big class to manage game assets and behavior"""
@@ -17,6 +20,9 @@ class alienInvasion:
 		self.settings.screen_width = self.screen.get_rect().width
 		self.settings.screen_height = self.screen.get_rect().height
 		pygame.display.set_caption("Alien Wreckfest")
+
+		#create instance of stats
+		self.stats = GameStats(self)
 
 		self.ship = Ship(self)
 		self.bullets = pygame.sprite.Group()
@@ -103,13 +109,37 @@ class alienInvasion:
 		for bullet in self.bullets.copy():
 				if bullet.rect.bottom <= 0:
 					self.bullets.remove(bullet)
-		#check if any bullets have hit any aliens then remove both
+		self._check_bullet_alien_collisions()
+	
+	def _check_bullet_alien_collisions(self):
+			#check if any bullets have hit any aliens then remove both
 		collisions = pygame.sprite.groupcollide(self.bullets, self.aliens, True, True)
+		if not self.aliens:
+			self.bullets.empty()
+			self._create_fleet()
+
+	def _ship_hit(self):
+		"""respond to getting wrecked by alien"""
+		self.stats.ships_left -= 1
+
+		#get rid of remaining aliens and bullets
+		self.aliens.empty()
+		self.bullets.empty()
+		#create new fleet
+		self._create_fleet()
+		self.ship.center_ship()
+		#pause
+		time.sleep(0.5)
+
 
 	def _update_aliens(self):
 		"""update positions of aliens"""
 		self._check_fleet_edges()
 		self.aliens.update()
+
+		#look for alien-ship collisions
+		if pygame.sprite.spritecollideany(self.ship, self.aliens):
+			self._ship_hit()
 
 
 	def _update_screen(self):
